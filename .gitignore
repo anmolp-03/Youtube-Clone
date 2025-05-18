@@ -117,4 +117,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+
+Model of youtube backend
+
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Node
