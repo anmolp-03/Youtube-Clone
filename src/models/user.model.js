@@ -72,7 +72,7 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 
 //jwt tokens are like keys
 // jo hume token bhejega, hum usse data bhej denge
-userSchema.methods.generateAcessToken = function () {
+userSchema.methods.generateAccessToken = function () {
     return jwt.sign(
         {
             _id: this._id,

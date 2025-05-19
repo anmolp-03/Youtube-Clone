@@ -4,7 +4,40 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 
+const generateAccessAndRefreshTokens = async(userId) => {
+    try{
+        const user = await User.findById(userId)
+        const accessToken = user.generateAccessToken()
+        const refreshToken = user.generateRefreshToken()
+
+        // access token user ko dedenge
+        // refresh token db me bhi save krna rehta h
+        user.refreshToken = refreshToken
+        await user.save(
+            {validateBeforeSave : false}
+        )
+
+        return {refreshToken, accessToken}
+
+    } catch(err){
+        throw new ApiError(500, "Something went wrong while generating Tokens")
+    }
+}
+
 const registerUser = asyncHandler( async (req, res) => {
+    // 1. get user data from frontend
+    //      but we don't have frontend so we take it from postman
+    // 2. then validate data
+    // 3. check if user already exists : username, email
+    // 4. check image
+    // 4. check avatar
+    // 5. upload them to cloudinary, check avatar
+    // 6. create user object - db me send krne ke liye 
+    // 6. create entry in db
+    // 7. remove password and refresh token field from response
+    // 8. check for user creation
+    // 9. resturn res
+
     const {username, fullname, email, password} = req.body
     console.log("Email: ", email);
 
@@ -93,18 +126,96 @@ const registerUser = asyncHandler( async (req, res) => {
 
 })
 
-export { registerUser }
+const loginUser = asyncHandler( async (req, res) => {
+    // 1. req body data le aao
+    // 2. username or email?
+    // 3. find the user
+    // 4. check password
+    // 5. generate access and refresh token
+    // 6. return tokens as cookies
+    
+    const {email, username, password} = req.body
+
+    if(!(email || username)){
+        throw new ApiError(400, "Provide username or email for Login!")
+    }
+
+    const user = await User.findOne({
+        $or: [{username}, {email}]
+    })
+
+    if(!user) throw new ApiError(404, "User Not Found!")
+
+    // check password
+    const isPasswordValid = await user.isPasswordCorrect(password)
+
+    if(!isPasswordValid) throw new ApiError(401, "Invalid User Password!")
+
+    // generate access and refresh token 
+    // ye boht baar use krenge
+    // isliye iska alag method upar banaya h
+    const {refreshToken, accessToken} = await generateAccessAndRefreshTokens(user._id)
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+
+    // ab ye tokens toh naye method se aa gye
+    // pr hume toh user se associated chahiye
+    // user ke andar tokens ki field abhi bhi empty h
+
+    //cookies
+    const options = {
+        httpOnly: true,
+        secure: true            //this makes cookies only modifiable from server
+    }
+
+    return res
+    .status(200)
+    .cookie("AccessToken", accessToken,options)
+    .cookie("RefreshToken", refreshToken, options)
+    .json(
+        new ApiResponse(
+            200, {
+                user: loggedInUser, accessToken, refreshToken
+            },
+            "User logged in successfully!"
+        )
+    )
+})
+
+const logoutUser = asyncHandler( async (req, res) => {
+    // ab login register me toh hum userinfo le rhe 
+    // aur phir usko db me find krke modify kr rhe
+    // pr logout ke time thodi hum user se input le skte
+    // toh usko find kese kre db me?
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                refreshToken: undefined
+            }
+        },
+        {
+            new: true
+        }
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: true            //this makes cookies only modifiable from server
+    }
+
+    return res
+    .status(200)
+    .clearCookie("AccessToken", options)
+    .clearCookie("RefreshToken", options)
+    .json(new ApiResponse(200,{}, "User logged out"))
+})
+
+export { 
+    registerUser,
+    loginUser,
+    logoutUser,
+
+}
 
 
-// 1. get user data from frontend
-//      but we don't have frontend so we take it from postman
-// 2. then validate data
-// 3. check if user already exists : username, email
-// 4. check image
-// 4. check avatar
-// 5. upload them to cloudinary, check avatar
-// 6. create user object - db me send krne ke liye 
-// 6. create entry in db
-// 7. remove password and refresh token field from response
-// 8. check for user creation
-// 9. resturn res
