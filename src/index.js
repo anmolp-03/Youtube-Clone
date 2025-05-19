@@ -4,7 +4,7 @@ import { app } from "./app.js";
 
 
 dotenv.config({
-    path: "./env",
+    path: "./.env",
 })
 
 connectDB()         //db connect hone ke baad kuch promises return krta hai

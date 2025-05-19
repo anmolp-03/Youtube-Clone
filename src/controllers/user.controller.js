@@ -50,7 +50,14 @@ const registerUser = asyncHandler( async (req, res) => {
     //multer ek local path laakr dega
 
     const avatarLocalPath = req.files?.avatar[0]?.path
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path
+
+    let coverImageLocalPath;
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLocalPath = req.files.coverImage[0].path;
+    } else {
+        coverImageLocalPath = ""; // or handle missing cover image case
+    }
 
     if(!avatarLocalPath) throw new ApiError(400, "Avatar is empty")
 
@@ -58,17 +65,17 @@ const registerUser = asyncHandler( async (req, res) => {
     const avatar = await uploadOnCloudinary(avatarLocalPath)
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
-    if(!avatar) throw new ApiError(400, "Avatar is empty")
+    if(!avatar) throw new ApiError(400, "Avatar not uploaded on cloudinary")
 
     // sab le liya ho toh object banao aur databse me entry krdo
     // user hi baat kr rha database se
 
     const user = await User.create({
-        fullName,
+        fullname,
         avatar: avatar.url,
         coverImage: coverImage?.url || "",      //not compulory, can be empty
         email,
-        username: toLowerCase(),
+        username: username.toLowerCase(),
         password
     })
 
@@ -78,7 +85,7 @@ const registerUser = asyncHandler( async (req, res) => {
     )
 
     if(!createdUser) throw new ApiError(500, "Something went wrong while registering the User")
-        
+    
     // return response
     return res.status(201).json(
         new ApiResponse(200, createdUser, "User registered Successfully ! :))")
