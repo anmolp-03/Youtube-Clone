@@ -9,3 +9,5 @@ class ApiResponse{
         this.success = statusCode < 400     // 404 - not found 
     }
 }
+
+export { ApiResponse }
