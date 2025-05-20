@@ -371,6 +371,90 @@ const updateCoverImage = asyncHandler( async (req,res) => {
     .json( new ApiResponse(200 , req.user , "Cover Image updated successfully"))
 })
 
+// aggregate pipeline use krte hai
+// toh db me aggregate function lagaaye toh uss array ka harr ek object ek stage hoga
+
+// ab user model se hume subscription model ko connect krna hai
+// aur intention to connect this (no. of subscribers, follow/unfollow flag, no. of sunscribed)
+
+const getUserChannelProfile = asyncHandler( async (req, res) => {
+    // this function basically aggregates normal User and CHannel user
+    // i.e. subscribers and users ( check subscription.model , you'll understand)
+
+    // hume username url se milega 
+    const {username} = req.params
+
+    if(!username?.trim) throw new ApiError("Username is missing!")
+
+    // username se hum db me find kr skte
+    // pr usse pura object milega phir usme se id lenge
+    // isse better hai hum aggregation pipeline me ek match() hota hai
+    // jo basically join ki tarah kaam krta
+
+    const channel = await User.aggregate([
+        {
+            $match: {       //pipeline 1 me humne username match krke nikaal liya
+                username: username?.toLowerCase()
+            }
+        },
+        {                       // pipeline 2 me hume uss user ko kitno ne subscribe kr rkha hai
+            $lookup: {
+                from: "subscriptions",       // model me se sab lowercase aur plural
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {                       // pipeline 3 me uss user ne kitno ko subscribe kr rkha hai wo count
+            $lookup: {
+                from: "subscriptions",       
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {                       // pipeline 4 me kuch nayi fields add krenge
+            $addFields: {
+                subscribersCount: {         // pipeline 2 me jo saare documents jama ho gye unko count krenge
+                    $size: "$subscribers"
+                },
+                channelsSubscribedTo: {
+                    $size: "$subscribedTo"
+                },
+                isSubscribed: {             // subscribe/subscribed button
+                    $cond: {                // jo document hai usme subscribers ki list me hum h ki nhi
+                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {         // pipeline 5 - display
+                fullname: 1,
+                username: 1,
+                email: 1,
+                subscribersCount: 1,
+                channelsSubscribedTo: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1
+            }
+        }
+    ])
+
+    console.log("channel: ",channel)
+
+    if(!channel?.length){
+        throw new ApiError(400, "Channel doesn't exist ")
+    }
+
+    return res
+    .status(200)
+    .json( new ApiResponse(200 , channel[0] , "User Channel Fetched successfully"))
+})
+
 export { 
     registerUser,
     loginUser,
@@ -380,7 +464,8 @@ export {
     getCurrentUser,
     updateProfileDetails,
     updateAvatar,
-    updateCoverImage
+    updateCoverImage,
+    getUserChannelProfile
 }
 
 
