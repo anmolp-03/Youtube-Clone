@@ -455,6 +455,49 @@ const getUserChannelProfile = asyncHandler( async (req, res) => {
     .json( new ApiResponse(200 , channel[0] , "User Channel Fetched successfully"))
 })
 
+// nested lookup concept 
+// watch video 21 for this
+const getWatchHistory = asyncHandler( async (req, res) => {
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup:{
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            //ab owner ki saari info aa gyi pr hume sab nhi chahie
+                            pipeline:[
+                                {
+                                    $project:{
+                                        fullname: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    return res
+    .status(200)
+    .json( new ApiResponse(200 , user[0].watchHistory , "Watch history Fetched successfully"))
+})
 export { 
     registerUser,
     loginUser,
