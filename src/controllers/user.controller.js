@@ -215,7 +215,6 @@ const logoutUser = asyncHandler( async (req, res) => {
 
 // accessToken ka endpoint (matlab wo khtm hone waala ho)
 // tab usko refreshToken ke thru regenerate krenge
-
 const refreshAccessToken = asyncHandler( async (req, res) => {
     try {
         const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
@@ -260,11 +259,128 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
     }
 })
 
+const changeCurrentPassword = asyncHandler( async (req, res) => {
+    try {
+        const { oldPassword, newPassword } = req.body
+
+        // ab change password ho pa rha 
+        // matlab user logged in hai => login hua kyuki middleware lagaya auth wala
+        // aur middleware last me req.user=user krdiya tha
+        // matlab apan usse user le aa skte
+        const user = await User.findById(req.user?._id)
+
+        const isOldPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+        if(!isOldPasswordCorrect) throw new ApiError(400, "Invalid Old Password!")
+
+        user.password = newPassword
+
+        // middleware run hone se pehle ek 'pre' run hoga jo user model me banaya tha
+        await user.save({validateBeforeSave: false})
+
+        return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Password Changed Successfully!"))
+    } catch (error) {
+        throw new ApiError( 400 , error?.message || "Invalid Request")
+    }
+})
+
+const getCurrentUser = asyncHandler( async (req,res) => {
+    return res
+    .status(200)
+    .json( new ApiResponse(200 , req.user , "Current User fetched successfully"))
+})
+
+const updateProfileDetails = asyncHandler( async (req,res) => {
+    const {fullname, email} = req.body
+
+    if(!fullname || !email){
+        throw new ApiError(400, "Please fill all fields")
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id, 
+        {
+            $set: {
+                fullname: fullname,
+                email: email
+            }
+        }, 
+        {new: true}
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json( new ApiResponse(200 ,user , "Account details updated successfully"  ))
+})
+
+//files update krni ho
+// multer middleware ke thru files accept kr skte
+// only logged in people can do that
+
+const updateAvatar = asyncHandler( async (req,res) => {
+
+    // req.files liya tha upar kyuki multiple files leni thi udhr
+    // yaha pr hume ek hi file chahiye
+    const avatarLocalPath = req.file?.path
+
+    if(!avatarLocalPath) throw new ApiError(400, "Avatar file is required!")
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+    if(!avatar.url) throw new ApiError(400, "Error while uploading avatar!")
+
+    await User.findByIdAndUpdate(
+        req.user?._id, 
+        {
+            $set: {
+                avatar: avatar.url
+            }
+        }, 
+        {new: true}
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json( new ApiResponse(200 , req.user , "Avatar updated successfully"))
+})
+
+const updateCoverImage = asyncHandler( async (req,res) => {
+
+    const coverImageLocalPathLocalPath = req.file?.path
+
+    if(!coverImageLocalPathLocalPath) throw new ApiError(400, "Cover Image file is required!")
+
+    const coverImage = await uploadOnCloudinary(coverImageLocalPathLocalPath)
+
+    if(!coverImage.url) throw new ApiError(400, "Error while uploading Cover Image!")
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id, 
+        {
+            $set: {
+                coverImage: coverImage.url
+            }
+        }, 
+        {new: true}
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json( new ApiResponse(200 , req.user , "Cover Image updated successfully"))
+})
+
 export { 
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateProfileDetails,
+    updateAvatar,
+    updateCoverImage
 }
 
 
