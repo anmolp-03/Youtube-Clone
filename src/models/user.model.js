@@ -72,20 +72,22 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 
 //jwt tokens are like keys
 // jo hume token bhejega, hum usse data bhej denge
-userSchema.methods.generateAccessToken = function () {
+userSchema.methods.generateAccessToken = function() {
     return jwt.sign(
         {
             _id: this._id,
             email: this.email,
             username: this.username,
-            fullname: this.fullName
+            fullName: this.fullName
         },
         process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+        {
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+        }
     )
 }
 
-userSchema.methods.generateRefreshToken = function () {
+userSchema.methods.generateRefreshToken = function() {
     return jwt.sign(
         {
             _id: this._id,

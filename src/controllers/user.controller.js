@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { verifyJWT } from "../middleware/auth.middleware.js"
+import mongoose from "mongoose"
 import jwt from "jsonwebtoken"
 
 const generateAccessAndRefreshTokens = async(userId) => {
@@ -244,7 +245,7 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
             secure : true 
         } 
         
-        const { accessToken, newrefreshToken } = await generateAccessAndRefereshTokens(user._id);
+        const { accessToken, newrefreshToken } = await generateAccessAndRefreshTokens(user._id);
     
         return res
         .status(200)
@@ -390,6 +391,7 @@ const getUserChannelProfile = asyncHandler( async (req, res) => {
     // pr usse pura object milega phir usme se id lenge
     // isse better hai hum aggregation pipeline me ek match() hota hai
     // jo basically join ki tarah kaam krta
+    console.log("username: ", username);
 
     const channel = await User.aggregate([
         {
