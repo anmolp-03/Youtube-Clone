@@ -31,4 +31,7 @@ app.use("/api/v1/users", userRouter)
 // ye /users will go to /users/register
 
 
+import videoRouter from "./routes/video.routes.js";
+app.use("/api/v1/videos", videoRouter);
+
 export { app }
