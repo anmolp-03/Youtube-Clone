@@ -1,11 +1,10 @@
-import { Video } from "../models/video.model";
-import { asyncHandler } from "../utils/asyncHandler";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { uploadOnCloudinary } from "../utils/cloudinary";
-import { User } from "../models/user.model";
+import { Video } from "../models/video.model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { User } from "../models/user.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
-
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy = "createdAt", sortType = "desc", userId } = req.query;
@@ -15,17 +14,17 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
     // 1. Full-Text Search (only works if search index is set in MongoDB Atlas)
     // This allows searching by video title or description
-    if(query){
-        pipeine.push({
-            $search: {
-                index: 'search-videos',
-                text: {
-                    query: query,
-                    path: ["title", "description"],
-                }
+    if (query) {
+        pipeline.push({
+            $match: {
+                $or: [
+                    { title: { $regex: query, $options: "i" } },
+                    { description: { $regex: query, $options: "i" } }
+                ]
             }
-        })
+        });
     }
+
 
     //filter by userId
 
@@ -54,27 +53,27 @@ const getAllVideos = asyncHandler(async (req, res) => {
     });
 
     // Stage 5: Lookup owner details from the 'users' collection
-    pipeline.push(
-        {
-            $lookup: {
-                from: "users", // Collection name in lowercase & plural
-                localField: "owner", // video.owner
-                foreignField: "_id", // user._id
-                as: "ownerDetails", // Output array
-                pipeline: [
-                    {
-                        $project: {
-                            username: 1,
-                            "avatar.url": 1
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            $unwind: "$ownerDetails" // Flatten the array to object
-        }
-    );
+    // pipeline.push(
+    //     {
+    //         $lookup: {
+    //             from: "users", // Collection name in lowercase & plural
+    //             localField: "owner", // video.owner
+    //             foreignField: "_id", // user._id
+    //             as: "ownerDetails", // Output array
+    //             pipeline: [
+    //                 {
+    //                     $project: {
+    //                         username: 1,
+    //                         "avatar.url": 1
+    //                     }
+    //                 }
+    //             ]
+    //         }
+    //     },
+    //     {
+    //         $unwind: "$ownerDetails" // Flatten the array to object
+    //     }
+    // );
 
     const videoAggregate = Video.aggregate(pipeline);
 
@@ -107,8 +106,10 @@ const publishAVideo = asyncHandler(async (req, res) => {
     }
 
     // Upload to cloudinary
-    const videoUpload = await uploadOnCloudinary(videoLocalPath);
+    const videoUpload = await uploadOnCloudinary(videoLocalPath,"video");
     const thumbnailUpload = await uploadOnCloudinary(thumbnailLocalPath);
+    console.log("thumbnail uploaded: ", thumbnailUpload)
+    console.log("video uploaded: ", videoUpload)
 
     if (!videoUpload.url || !thumbnailUpload.url) {
         throw new ApiError(500, "Upload failed");
@@ -117,11 +118,11 @@ const publishAVideo = asyncHandler(async (req, res) => {
     // Step 4: Extract details
     const videoOwner = req.user?._id;
 
-    const durationInSeconds = video?.duration;
+    const durationInSeconds = videoUpload?.duration;
 
     const newVideo = await Video.create({
-        videoFile: video?.url,
-        thumbnail: thumbnail?.url,
+        videoFile: videoUpload?.url,
+        thumbnail: thumbnailUpload?.url,  // Fix here
         title,
         description,
         duration: durationInSeconds,
@@ -129,6 +130,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         isPublished: true,
         owner: videoOwner,
     });
+
 
     if (!newVideo) {
         throw new ApiError(500, "something went wrong while uploading video");

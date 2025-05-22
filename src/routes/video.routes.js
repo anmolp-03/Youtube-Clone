@@ -8,8 +8,9 @@ import {
   updateVideo,
   addView,
 } from "../controllers/video.controller.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { upload } from "../middlewares/multer.middleware.js";
+
+import { upload } from "../middleware/multer.middleware.js"
+import { verifyJWT } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -28,15 +29,15 @@ router.route("/")
   );
 
 // /videos/:id
-router.route("/:id")
+router.route("/:videoId")
   .get(getVideoById)
   .delete(deleteVideo)
   .patch(upload.single("thumbnail"), updateVideo);
 
 // /videos/:id/toggle
-router.patch("/:id/toggle", togglePublishStatus);
+router.patch("/:videoId/toggle", togglePublishStatus);
 
 // /videos/:id/view
-router.patch("/:id/view", addView);
+router.patch("/:videoId/view", addView);
 
 export default router;
