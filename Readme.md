@@ -118,9 +118,5 @@ src/
    npm start
    ```
 
----
 
-## 🧑 Author
-
-**Anmol Panjwani**
 
