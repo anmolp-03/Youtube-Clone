@@ -34,4 +34,11 @@ app.use("/api/v1/users", userRouter)
 import videoRouter from "./routes/video.routes.js";
 app.use("/api/v1/videos", videoRouter);
 
+import subscriptionRouter from "./routes/subscription.routes.js";
+app.use("/api/v1/subscriptions", subscriptionRouter);
+
+import likeRouter from "./routes/like.routes.js";
+app.use("/api/v1/likes", likeRouter);
+
+
 export { app }
