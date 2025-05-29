@@ -6,6 +6,7 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2"
 
+
 const getUserTweets = asyncHandler(async (req, res) => {
     const { userId } = req.params
     const { page = 1, limit = 10 } = req.query
@@ -133,7 +134,7 @@ const createTweet = asyncHandler(async (req, res) => {
 
 
 const updateTweet = asyncHandler(async (req, res) => {
-    const { tweetId } = req.params
+    const  tweetId  = req.params.tweetId
     const { content } = req.body
 
     if (!isValidObjectId(tweetId)) {
