@@ -45,7 +45,12 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 })
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
-    const {commentId} = req.params
+    const commentId = req.params.commentId
+    const comment = await Comment.findById(commentId).select("video");
+    if (!comment) {
+        throw new ApiError(404, "Comment not found");
+    }
+    const videoId = comment.video; 
     //TODO: toggle like on comment
 
     const userId = req.user._id;
