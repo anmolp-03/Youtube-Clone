@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 import { Schema } from "mongoose";
-import { Comment } from "../models/comment.model";
-import { asyncHandler } from "../utils/asyncHandler";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
+import { Video } from "../models/video.model.js";
+import { Comment } from "../models/comment.model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { isValidObjectId } from "mongoose";
 
 const getVideoComments = asyncHandler(async (req, res) => {
     //TODO: get all comments for a video
@@ -104,21 +106,26 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
 const addComment = asyncHandler(async (req, res) => {
     // TODO: add a comment to a video
-    const {videoId} = req.params
-    const {content} = req.body
+    const videoId = req.params.videoId
+    const { content } = req.body
+    const userId = req.user?._id ;
+
+    console.log("Adding comment for videoId:", videoId);
+    console.log("Comment content:", content);
+    console.log("User ID:", userId);
     
     try {
         if (!isValidObjectId(videoId)) {
-            throw new ApiError( 400 , "invalid tweet object Id" )
+            throw new ApiError( 400 , "invalid video object Id" )
         }  
         if (!content || content.trim() === "") {
             throw new ApiError( 400 , "Content is required" )
         }
 
-        const videoExists = await Video.exists({ _id: videoId });
-        if (!videoExists) {
-            throw new ApiError(404, "Video not found");
+        if( !videoId?.trim() || !userId ){
+            throw new ApiError( 404 , "User or Video not found" )
         }
+
 
         const newComment = await Comment.create({
             content,
@@ -167,17 +174,18 @@ const addComment = asyncHandler(async (req, res) => {
         ]);
 
         return res.status(201).json(
-            new ApiResponse(201, result[0], "Comment added successfully")
+            new ApiResponse(201, comment[0], "Comment added successfully")
         );
 
     } catch (error) {
+        console.error("Error while adding comment:", error.message);
         return res.status(error.statusCode || 500).json(new ApiError(error.statusCode || 500, error.message));
     }
 })
 
 const updateComment = asyncHandler(async (req, res) => {
     // TODO: update a comment
-    const { commentId } = req.params;
+    const  commentId  = req.params.commentId;
     const { content } = req.body;
     const userId = req.user?._id;
 
@@ -244,7 +252,7 @@ const updateComment = asyncHandler(async (req, res) => {
 
 const deleteComment = asyncHandler(async (req, res) => {
     // TODO: delete a comment
-    const {commentId} = req.params ;
+    const commentId = req.params.commentId ;
     
     if (!isValidObjectId(commentId)) {
         throw new ApiError( 400 , "invalid tweet object Id" )
