@@ -14,10 +14,27 @@ import jwt from "jsonwebtoken"
 // verify user tokens
 export const verifyJWT = asyncHandler(async (req, res, next) => {
     try {
-        // token ka access kese loge?
-        // req ke pass cookies ka access h
-        // jo cookie-parser ke thru diya humne
-        const token = req.cookies?.accessToken || req.header( "Authorization")?.replace("Bearer " ,"" )
+        // Try to get token from cookies (case-insensitive)
+        let token =
+            (req.cookies && (
+                req.cookies.accessToken ||
+                req.cookies.AccessToken ||
+                req.cookies.accesstoken
+            )) || null;
+
+        // Try to get token from Authorization header if not found in cookies
+        if (!token) {
+            const authHeader = req.header("Authorization");
+            if (authHeader && authHeader.startsWith("Bearer ")) {
+                token = authHeader.replace("Bearer ", "").trim();
+            }
+        }
+
+        if (!token) {
+            // Only log once for missing token
+            console.error("No token found in cookies or Authorization header.");
+            throw new ApiError(401, "Unauthorized request: No token provided. Please include your token in the 'Authorization' header as 'Bearer <token>' or in the 'accessToken' cookie.");
+        }
         console.log("Extracted Token:", token);  // Log the token
         if(!token){
             throw new ApiError(401, "Unauthorised request")
@@ -43,6 +60,6 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
         next()
 
     } catch (error) {
-        throw new ApiError( 401 , error?.message || "invalid access token" )
+        throw new ApiError(401, error?.message || "invalid access token" )
     }
 })
