@@ -1,6 +1,7 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Playlist } from "../models/playlist.model.js";
 import { Video } from "../models/video.model.js";
+import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -52,9 +53,12 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
         // Retrieve playlists for the user
         const playlists = await Playlist.find({ owner: userId })
+            .sort({ createdAt: -1 }) // Sort by creation date, most recent first
             .select("name description videos createdAt")
             .populate("videos", "title thumbnail duration")
-            .sort({ createdAt: -1 }) // Sort by creation date, most recent first;
+            
+
+        console.log("Playlists:", playlists);
 
         return res
             .status(200)
@@ -100,18 +104,26 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const {playlistId, videoId} = req.params
+    const userId = req.user?._id;
+
+    // Check if playlist exists
+    const playlist = await Playlist.findById(playlistId);
+    if (!playlist) {
+        throw new ApiError(404, "Playlist not found");
+    }
+
+    // console.log("Playlist owner ID:", playlist.owner);
+    // console.log("User ID:", userId);
+    if (playlist.owner.toString() !== userId.toString()) {
+        throw new ApiError(403, "You are not authorized to add videos to this playlist");
+    }
+
 
     try {
         // Validate IDs
         if (!isValidObjectId(playlistId) || !isValidObjectId(videoId)) {
             throw new ApiError(400, "Invalid playlist or video ID");
-        }
-
-        // Check if playlist exists
-        const playlist = await Playlist.findById(playlistId);
-        if (!playlist) {
-            throw new ApiError(404, "Playlist not found");
-        }
+        }        
 
         // Check if video exists
         const videoExists = await Video.exists({ _id: videoId });
@@ -229,7 +241,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
         return res
             .status(200)
             .json(new ApiResponse(200, playlist, "Playlist updated successfully"));
-            
+
     } catch (error) {
         console.error("Error updating playlist:", error);
         throw new ApiError(500, "Failed to update playlist");
