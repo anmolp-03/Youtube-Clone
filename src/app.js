@@ -49,7 +49,7 @@ app.use("/api/v1/tweets", tweetRouter);
 import playlistRouter from "./routes/playlist.routes.js";
 app.use("/api/v1/playlists", playlistRouter);
 
-import healthcheckRouter from './routs/healthcheck.routes.js'
+import healthcheckRouter from './routes/healthcheck.routes.js'
 app.use("/api/v1/healthcheck", healthcheckRouter)
 
 import dashboardRouter from "./routes/dashboard.routes.js";
